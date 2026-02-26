@@ -19,7 +19,27 @@ const dreamData = {
     }
 };
 
-// 从 API 加载所有数据
+// 加载公开数据（不需要登录）
+async function loadPublicData() {
+    try {
+        const [dreams, feed, categories] = await Promise.all([
+            api.getDreams(),
+            api.getFeed(),
+            api.getCategories()
+        ]);
+
+        dreamData.dreams = dreams;
+        dreamData.feed = feed;
+        dreamData.categories = categories;
+
+        return true;
+    } catch (error) {
+        console.error('Failed to load public data:', error);
+        return false;
+    }
+}
+
+// 从 API 加载所有数据（需要登录）
 async function loadAllData() {
     try {
         const [dreams, feed, notifications, profile, categories] = await Promise.all([
@@ -72,3 +92,4 @@ async function loadDreamComments(dreamId) {
         return [];
     }
 }
+

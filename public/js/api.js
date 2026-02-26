@@ -4,14 +4,25 @@
 const api = {
     baseUrl: '',  // 同域，无需前缀
 
+    // 获取存储的token
+    getToken() {
+        return localStorage.getItem('auth_token');
+    },
+
     // 通用请求方法
     async request(url, options = {}) {
         try {
+            const token = this.getToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(this.baseUrl + url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
+                headers,
                 ...options
             });
 
@@ -26,6 +37,37 @@ const api = {
             console.error(`API Error [${url}]:`, error);
             throw error;
         }
+    },
+
+    // ========== Auth ==========
+
+    // 注册
+    async register(name, password) {
+        return this.request('/api/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ name, password })
+        });
+    },
+
+    // 登录
+    async login(name, password) {
+        return this.request('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ name, password })
+        });
+    },
+
+    // 获取当前用户
+    async getMe() {
+        return this.request('/api/auth/me');
+    },
+
+    // 修改密码
+    async changePassword(oldPassword, newPassword) {
+        return this.request('/api/auth/change-password', {
+            method: 'PUT',
+            body: JSON.stringify({ oldPassword, newPassword })
+        });
     },
 
     // ========== Dreams ==========
@@ -58,6 +100,14 @@ const api = {
     async sponsorDream(dreamId) {
         return this.request(`/api/dreams/${dreamId}/sponsor`, {
             method: 'POST'
+        });
+    },
+
+    // 评分梦想
+    async rateDream(dreamId, rating) {
+        return this.request(`/api/dreams/${dreamId}/rate`, {
+            method: 'POST',
+            body: JSON.stringify({ rating })
         });
     },
 
@@ -107,6 +157,29 @@ const api = {
         return this.request('/api/profile/daily-reward', {
             method: 'POST'
         });
+    },
+
+    // 修改个性签名
+    async updateBio(bio) {
+        return this.request('/api/profile/bio', {
+            method: 'PUT',
+            body: JSON.stringify({ bio })
+        });
+    },
+
+    // 获取用户发布的梦想
+    async getMyDreams() {
+        return this.request('/api/profile/my-dreams');
+    },
+
+    // 获取用户支持过的梦想
+    async getSupportedDreams() {
+        return this.request('/api/profile/supported-dreams');
+    },
+
+    // 删除梦想
+    async deleteDream(id) {
+        return this.request(`/api/dreams/${id}`, { method: 'DELETE' });
     },
 
     // ========== Categories ==========

@@ -1,6 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
+const { JWT_SECRET } = require('./auth');
+
+// 从token中获取用户ID的辅助函数
+function getUserId(req) {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) return null;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return decoded.userId;
+    } catch {
+        return null;
+    }
+}
 
 // GET /api/dreams - 获取所有梦想
 router.get('/', async (req, res) => {
@@ -32,6 +46,7 @@ router.get('/', async (req, res) => {
             id: d.id,
             title: d.title,
             description: d.description,
+            authorId: d.author_id,
             author: {
                 name: d.author?.name || 'Anonymous',
                 avatar: d.author?.avatar || null,
@@ -48,7 +63,8 @@ router.get('/', async (req, res) => {
             comments: d.comments_count,
             coverImage: d.cover_image,
             featured: d.featured,
-            impossibleIndex: d.impossible_index
+            impossibleIndex: parseFloat(d.impossible_index) || 0,
+            ratingCount: d.rating_count || 0
         }));
 
         res.json(dreams);
@@ -62,6 +78,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = getUserId(req);
 
         const { data, error } = await supabase
             .from('dreams')
@@ -75,10 +92,37 @@ router.get('/:id', async (req, res) => {
         if (error) throw error;
         if (!data) return res.status(404).json({ error: 'Dream not found' });
 
+        // 检查当前用户是否已评分
+        let userRating = null;
+        if (userId) {
+            const { data: ratingData } = await supabase
+                .from('dream_ratings')
+                .select('rating')
+                .eq('dream_id', id)
+                .eq('user_id', userId)
+                .single();
+            if (ratingData) userRating = ratingData.rating;
+        }
+
+        // 检查当前用户今日是否已赞助
+        let sponsoredToday = false;
+        if (userId) {
+            const today = new Date().toISOString().split('T')[0];
+            const { data: sponsorData } = await supabase
+                .from('dream_sponsors')
+                .select('id')
+                .eq('dream_id', id)
+                .eq('user_id', userId)
+                .eq('sponsor_date', today)
+                .single();
+            if (sponsorData) sponsoredToday = true;
+        }
+
         const dream = {
             id: data.id,
             title: data.title,
             description: data.description,
+            authorId: data.author_id,
             author: {
                 name: data.author?.name || 'Anonymous',
                 avatar: data.author?.avatar || null,
@@ -95,7 +139,10 @@ router.get('/:id', async (req, res) => {
             comments: data.comments_count,
             coverImage: data.cover_image,
             featured: data.featured,
-            impossibleIndex: data.impossible_index
+            impossibleIndex: parseFloat(data.impossible_index) || 0,
+            ratingCount: data.rating_count || 0,
+            userRating,
+            sponsoredToday
         };
 
         res.json(dream);
@@ -108,36 +155,50 @@ router.get('/:id', async (req, res) => {
 // POST /api/dreams - 创建新梦想
 router.post('/', async (req, res) => {
     try {
-        const { title, description, category, emoji, goal, impossibleIndex, anonymous } = req.body;
-        const authorId = 1; // 默认使用当前用户 (id=1)
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: '请先登录' });
+        }
+
+        const { title, description, emoji, goal, impossibleIndex, anonymous, coverImage } = req.body;
 
         const { data, error } = await supabase
             .from('dreams')
             .insert({
                 title,
                 description,
-                author_id: anonymous ? null : authorId,
-                category,
+                author_id: anonymous ? null : userId,
                 emoji: emoji || '✨',
                 goal: goal || 1000,
-                impossible_index: impossibleIndex || 50,
+                impossible_index: impossibleIndex || 0,
+                rating_count: impossibleIndex ? 1 : 0,
                 progress: 0,
                 energy: 0,
                 supporters: 0,
                 likes: 0,
                 comments_count: 0,
                 is_completed: false,
-                featured: false
+                featured: false,
+                cover_image: coverImage || null
             })
             .select()
             .single();
 
         if (error) throw error;
 
-        // Also create a feed activity for this publish action
+        // 如果有初始评分，记录到评分表
+        if (impossibleIndex && impossibleIndex > 0) {
+            await supabase.from('dream_ratings').insert({
+                dream_id: data.id,
+                user_id: userId,
+                rating: impossibleIndex
+            });
+        }
+
+        // 创建动态记录
         await supabase.from('feed_activities').insert({
             type: 'publish',
-            user_id: anonymous ? null : authorId,
+            user_id: anonymous ? null : userId,
             target_dream_id: data.id,
             time_ago: '刚刚',
             action_color: 'blue'
@@ -150,11 +211,114 @@ router.post('/', async (req, res) => {
     }
 });
 
+// POST /api/dreams/:id/rate - 给梦想评分
+router.post('/:id/rate', async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: '请先登录' });
+        }
+
+        const dreamId = parseInt(req.params.id);
+        const { rating } = req.body;
+
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ error: '评分需要在1-5之间' });
+        }
+
+        // 检查是否已评分
+        const { data: existingRating } = await supabase
+            .from('dream_ratings')
+            .select('id')
+            .eq('dream_id', dreamId)
+            .eq('user_id', userId)
+            .single();
+
+        if (existingRating) {
+            return res.status(400).json({ error: '你已经对这个梦想评过分了' });
+        }
+
+        // 插入评分
+        const { error: insertError } = await supabase
+            .from('dream_ratings')
+            .insert({
+                dream_id: dreamId,
+                user_id: userId,
+                rating: Math.round(rating)
+            });
+
+        if (insertError) throw insertError;
+
+        // 计算新的平均分和评分人数
+        const { data: ratings, error: ratingError } = await supabase
+            .from('dream_ratings')
+            .select('rating')
+            .eq('dream_id', dreamId);
+
+        if (ratingError) throw ratingError;
+
+        const ratingCount = ratings.length;
+        const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratingCount;
+
+        // 更新梦想的不可思议指数
+        const { error: updateError } = await supabase
+            .from('dreams')
+            .update({
+                impossible_index: Math.round(avgRating * 100) / 100,
+                rating_count: ratingCount
+            })
+            .eq('id', dreamId);
+
+        if (updateError) throw updateError;
+
+        res.json({
+            success: true,
+            impossibleIndex: Math.round(avgRating * 100) / 100,
+            ratingCount,
+            userRating: Math.round(rating)
+        });
+    } catch (error) {
+        console.error('Error rating dream:', error);
+        res.status(500).json({ error: '评分失败' });
+    }
+});
+
 // POST /api/dreams/:id/sponsor - 赞助梦想
 router.post('/:id/sponsor', async (req, res) => {
     try {
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: '请先登录' });
+        }
+
         const dreamId = parseInt(req.params.id);
-        const userId = 1; // 默认当前用户
+
+        // 检查是否是自己的梦想
+        const { data: dream, error: dreamError } = await supabase
+            .from('dreams')
+            .select('energy, supporters, author_id, goal')
+            .eq('id', dreamId)
+            .single();
+
+        if (dreamError) throw dreamError;
+
+        if (dream.author_id === userId) {
+            return res.status(400).json({ error: '不能赞助自己的梦想哦' });
+        }
+
+        // 检查今日是否已赞助
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existingSponsor } = await supabase
+            .from('dream_sponsors')
+            .select('id')
+            .eq('dream_id', dreamId)
+            .eq('user_id', userId)
+            .eq('sponsor_date', today)
+            .single();
+
+        if (existingSponsor) {
+            return res.status(400).json({ error: '今天已经赞助过这个梦想了，明天再来吧' });
+        }
 
         // 获取用户能量
         const { data: user, error: userError } = await supabase
@@ -177,25 +341,26 @@ router.post('/:id/sponsor', async (req, res) => {
 
         if (updateUserError) throw updateUserError;
 
-        // 获取梦想当前数据
-        const { data: dream, error: dreamError } = await supabase
-            .from('dreams')
-            .select('energy, supporters')
-            .eq('id', dreamId)
-            .single();
-
-        if (dreamError) throw dreamError;
-
         // 更新梦想能量和支持者数
+        const newEnergy = dream.energy + 10;
+        const newProgress = Math.min(100, Math.round((newEnergy / dream.goal) * 100));
         const { error: updateDreamError } = await supabase
             .from('dreams')
             .update({
-                energy: dream.energy + 10,
-                supporters: dream.supporters + 1
+                energy: newEnergy,
+                supporters: dream.supporters + 1,
+                progress: newProgress
             })
             .eq('id', dreamId);
 
         if (updateDreamError) throw updateDreamError;
+
+        // 记录赞助
+        await supabase.from('dream_sponsors').insert({
+            dream_id: dreamId,
+            user_id: userId,
+            sponsor_date: today
+        });
 
         // 创建动态记录
         await supabase.from('feed_activities').insert({
@@ -209,8 +374,9 @@ router.post('/:id/sponsor', async (req, res) => {
         res.json({
             success: true,
             newEnergy: user.energy - 10,
-            dreamEnergy: dream.energy + 10,
-            dreamSupporters: dream.supporters + 1
+            dreamEnergy: newEnergy,
+            dreamSupporters: dream.supporters + 1,
+            dreamProgress: newProgress
         });
     } catch (error) {
         console.error('Error sponsoring dream:', error);
@@ -252,9 +418,13 @@ router.get('/:dreamId/comments', async (req, res) => {
 // POST /api/dreams/:dreamId/comments - 发表评论
 router.post('/:dreamId/comments', async (req, res) => {
     try {
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: '请先登录' });
+        }
+
         const { dreamId } = req.params;
         const { text } = req.body;
-        const userId = 1; // 默认当前用户
 
         // 获取用户信息
         const { data: user, error: userError } = await supabase
@@ -281,16 +451,16 @@ router.post('/:dreamId/comments', async (req, res) => {
         if (error) throw error;
 
         // 更新梦想评论数
-        const { data: dream } = await supabase
+        const { data: dreamData } = await supabase
             .from('dreams')
             .select('comments_count')
             .eq('id', parseInt(dreamId))
             .single();
 
-        if (dream) {
+        if (dreamData) {
             await supabase
                 .from('dreams')
-                .update({ comments_count: dream.comments_count + 1 })
+                .update({ comments_count: dreamData.comments_count + 1 })
                 .eq('id', parseInt(dreamId));
         }
 
@@ -307,6 +477,83 @@ router.post('/:dreamId/comments', async (req, res) => {
     } catch (error) {
         console.error('Error posting comment:', error);
         res.status(500).json({ error: 'Failed to post comment' });
+    }
+});
+
+// DELETE /api/dreams/:id - 删除梦想
+router.delete('/:id', async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ error: '请先登录' });
+
+        const dreamId = parseInt(req.params.id);
+
+        // 获取梦想信息
+        const { data: dream, error: dreamError } = await supabase
+            .from('dreams')
+            .select('*')
+            .eq('id', dreamId)
+            .single();
+
+        if (dreamError || !dream) return res.status(404).json({ error: '梦想不存在' });
+        if (dream.author_id !== userId) return res.status(403).json({ error: '只能删除自己的梦想' });
+
+        // 如果未完成，退还能量给所有赞助者
+        if (!dream.is_completed) {
+            const { data: sponsors } = await supabase
+                .from('dream_sponsors')
+                .select('user_id, sponsor_date')
+                .eq('dream_id', dreamId);
+
+            if (sponsors && sponsors.length > 0) {
+                // 按用户分组计算每人赞助次数（每次10能量）
+                const refundMap = {};
+                sponsors.forEach(s => {
+                    refundMap[s.user_id] = (refundMap[s.user_id] || 0) + 10;
+                });
+
+                // 退还能量并发送通知
+                for (const [sponsorUserId, refundAmount] of Object.entries(refundMap)) {
+                    const uid = parseInt(sponsorUserId);
+
+                    // 退还能量
+                    const { data: user } = await supabase
+                        .from('users')
+                        .select('energy')
+                        .eq('id', uid)
+                        .single();
+
+                    if (user) {
+                        await supabase
+                            .from('users')
+                            .update({ energy: user.energy + refundAmount })
+                            .eq('id', uid);
+                    }
+
+                    // 发送通知
+                    await supabase.from('notifications').insert({
+                        user_id: uid,
+                        type: 'refund',
+                        content: `梦想「${dream.title}」已被作者删除，您赞助的 ${refundAmount} 能量已退还`,
+                        time_ago: '刚刚',
+                        read: false
+                    });
+                }
+            }
+        }
+
+        // 删除梦想（CASCADE 会自动删除关联的评分、赞助、评论）
+        const { error: deleteError } = await supabase
+            .from('dreams')
+            .delete()
+            .eq('id', dreamId);
+
+        if (deleteError) throw deleteError;
+
+        res.json({ success: true, message: '梦想已删除' });
+    } catch (error) {
+        console.error('Error deleting dream:', error);
+        res.status(500).json({ error: '删除失败' });
     }
 });
 

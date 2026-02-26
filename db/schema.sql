@@ -1,11 +1,13 @@
 -- ============================================
--- 幻想梦想 App - Supabase Database Schema
+-- 梦嘢 App - Supabase Database Schema V0.2
 -- ============================================
 
 -- 用户表
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    role VARCHAR(20) DEFAULT 'user',
+    password_hash VARCHAR(255),
     avatar TEXT,
     verified BOOLEAN DEFAULT FALSE,
     bio TEXT,
@@ -41,8 +43,29 @@ CREATE TABLE IF NOT EXISTS dreams (
     comments_count INTEGER DEFAULT 0,
     cover_image TEXT,
     featured BOOLEAN DEFAULT FALSE,
-    impossible_index INTEGER DEFAULT 50,
+    impossible_index NUMERIC(3,2) DEFAULT 0,
+    rating_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 梦想评分表
+CREATE TABLE IF NOT EXISTS dream_ratings (
+    id SERIAL PRIMARY KEY,
+    dream_id INTEGER REFERENCES dreams(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(dream_id, user_id)
+);
+
+-- 梦想赞助记录表
+CREATE TABLE IF NOT EXISTS dream_sponsors (
+    id SERIAL PRIMARY KEY,
+    dream_id INTEGER REFERENCES dreams(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    sponsor_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(dream_id, user_id, sponsor_date)
 );
 
 -- 动态活动表
@@ -88,3 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_dreams_category ON dreams(category);
 CREATE INDEX IF NOT EXISTS idx_feed_activities_created ON feed_activities(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 CREATE INDEX IF NOT EXISTS idx_comments_dream ON comments(dream_id);
+CREATE INDEX IF NOT EXISTS idx_dream_ratings_dream ON dream_ratings(dream_id);
+CREATE INDEX IF NOT EXISTS idx_dream_ratings_user ON dream_ratings(user_id);
+CREATE INDEX IF NOT EXISTS idx_dream_sponsors_dream ON dream_sponsors(dream_id);
+CREATE INDEX IF NOT EXISTS idx_dream_sponsors_date ON dream_sponsors(sponsor_date);

@@ -1,31 +1,47 @@
 // Router Configuration
 const routes = {
-    home: { title: '梦想大厅', template: 'home', showBack: false, showShare: false },
-    feed: { title: '动态', template: 'feed', showBack: false, showShare: false },
-    notifications: { title: '通知', template: 'notifications', showBack: false, showShare: false },
-    profile: { title: '我的', template: 'profile', showBack: false, showShare: false },
-    create: { title: '种下梦想', template: 'create', showBack: true, showShare: false },
-    detail: { title: '梦想详情', template: 'detail', showBack: true, showShare: true }
+    home: { title: '梦嘢', template: 'home', showBack: false, showShare: false, requireAuth: false },
+    feed: { title: '动态', template: 'feed', showBack: false, showShare: false, requireAuth: false },
+    notifications: { title: '通知', template: 'notifications', showBack: false, showShare: false, requireAuth: true },
+    profile: { title: '我的', template: 'profile', showBack: false, showShare: false, requireAuth: true },
+    create: { title: '种下梦想', template: 'create', showBack: true, showShare: false, requireAuth: true },
+    detail: { title: '梦想详情', template: 'detail', showBack: true, showShare: true, requireAuth: false },
+    login: { title: '登录', template: 'login', showBack: false, showShare: false, requireAuth: false, hideNav: true },
+    register: { title: '注册', template: 'register', showBack: false, showShare: false, requireAuth: false, hideNav: true }
 };
 
 // Current page state
 let currentPage = 'home';
 let currentDreamId = null;
 
+// Check if user is logged in
+function isLoggedIn() {
+    return !!localStorage.getItem('auth_token');
+}
+
 // Navigation function
 function navigateTo(page, params = {}) {
+    const route = routes[page];
+    if (!route) return;
+
+    // Auth check
+    if (route.requireAuth && !isLoggedIn()) {
+        navigateTo('login');
+        return;
+    }
+
     // Update current page state
     currentPage = page;
     if (params.dreamId) {
         currentDreamId = params.dreamId;
     }
-    
+
     // Update navigation UI
     updateNavigationUI(page);
-    
+
     // Load page content
     loadPageContent(page, params);
-    
+
     // Update URL hash (for browser back button support)
     if (params.dreamId) {
         window.location.hash = `${page}/${params.dreamId}`;
@@ -39,62 +55,15 @@ function updateNavigationUI(activePage) {
     const routeConfig = routes[activePage];
     if (!routeConfig) return;
 
-    // Update page title
-    const pageTitle = document.getElementById('page-title');
-    if (pageTitle) {
-        if (activePage === 'home') {
-            pageTitle.innerHTML = '<span class="mr-2">⚡</span>幻想梦想';
-        } else {
-            pageTitle.textContent = routeConfig.title;
-        }
-    }
-
-    // Show/hide back button
-    const backButton = document.getElementById('back-button');
-    if (backButton) {
-        if (routeConfig.showBack) {
-            backButton.classList.remove('hidden');
-            backButton.classList.add('flex');
-        } else {
-            backButton.classList.add('hidden');
-            backButton.classList.remove('flex');
-        }
-    }
-
-    // Show/hide share button
-    const shareButton = document.getElementById('share-button');
-    if (shareButton) {
-        if (routeConfig.showShare) {
-            shareButton.classList.remove('hidden');
-            shareButton.classList.add('flex');
-        } else {
-            shareButton.classList.add('hidden');
-            shareButton.classList.remove('flex');
-        }
-    }
-
-    // Show/hide bottom navigation (hide on detail page)
-    const bottomNav = document.querySelector('nav');
+    // Show/hide bottom navigation
+    const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav) {
-        if (activePage === 'detail') {
+        if (activePage === 'detail' || routeConfig.hideNav) {
             bottomNav.classList.add('hidden');
         } else {
             bottomNav.classList.remove('hidden');
         }
     }
-
-    // Update top tabs (if they exist)
-    document.querySelectorAll('.page-tab').forEach(tab => {
-        const page = tab.getAttribute('data-page');
-        if (page === activePage || (activePage === 'create' && page === 'home')) {
-            tab.classList.add('active');
-            tab.classList.remove('bg-glass', 'text-slate-300', 'border-glass-border');
-            tab.classList.add('bg-primary', 'text-white', 'border-primary/50');
-        } else {
-            tab.classList.remove('active', 'bg-primary', 'text-white', 'border-primary/50');
-            tab.classList.add('bg-glass', 'text-slate-300', 'border-glass-border');
-        }
-    });
 
     // Update bottom nav
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -129,7 +98,6 @@ function updateNavigationUI(activePage) {
 
 // Go back function
 function goBack() {
-    // Navigate back to previous page
     if (currentPage === 'detail' || currentPage === 'create') {
         navigateTo('home');
     } else {
@@ -144,7 +112,7 @@ function loadPageContent(page, params = {}) {
 
     setTimeout(() => {
         let html = '';
-        switch(page) {
+        switch (page) {
             case 'home':
                 html = renderHomePage();
                 break;
@@ -163,11 +131,22 @@ function loadPageContent(page, params = {}) {
             case 'detail':
                 html = renderDetailPage(params.dreamId);
                 break;
+            case 'login':
+                html = renderLoginPage();
+                break;
+            case 'register':
+                html = renderRegisterPage();
+                break;
             default:
                 html = renderHomePage();
         }
 
         contentContainer.innerHTML = `<div class="fade-in">${html}</div>`;
+
+        // Initialize page-specific behavior
+        if (page === 'create') {
+            initCreatePage();
+        }
     }, 100);
 }
 
@@ -175,19 +154,19 @@ function loadPageContent(page, params = {}) {
 function initializeRouter() {
     // Check URL hash
     const hash = window.location.hash.slice(1); // Remove #
-    
+
     if (hash) {
         const parts = hash.split('/');
         const page = parts[0];
         const dreamId = parts[1] ? parseInt(parts[1]) : null;
-        
+
         if (routes[page]) {
             navigateTo(page, dreamId ? { dreamId } : {});
             return;
         }
     }
-    
-    // Default to home page
+
+    // Default: always go to home
     navigateTo('home');
 }
 
@@ -198,7 +177,7 @@ window.addEventListener('hashchange', () => {
         const parts = hash.split('/');
         const page = parts[0];
         const dreamId = parts[1] ? parseInt(parts[1]) : null;
-        
+
         if (routes[page]) {
             currentPage = page;
             if (dreamId) currentDreamId = dreamId;

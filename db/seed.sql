@@ -1,68 +1,80 @@
 -- ============================================
--- 幻想梦想 App - Seed Data
+-- 幻想梦想 App - Seed Data (Grounded & Realistic Version)
+-- 请在 Supabase SQL Editor 中执行此文件
 -- ============================================
 
+-- 先清空数据 (注意顺序，因为有外键关联)
+TRUNCATE TABLE feed_activities, notifications, comments, dream_sponsors, dream_ratings, dreams, categories, users RESTART IDENTITY CASCADE;
+
 -- 插入用户数据
-INSERT INTO users (id, name, avatar, verified, bio, energy, followers, following, today_claimed) VALUES
-(1, '梦想家 小明', 'https://lh3.googleusercontent.com/aida-public/AB6AXuCKUsfpKRgdNyObSJQRMqETCkMaIZodX_SAqJXXT8Is-ZKfQwFrmxvdBbLVwzHdrbV6A0YSE6VjaFQZG2NTthZLZF19oZ44SNRTjRh3m_UFKH71S97n9-cgfnIFW5Dy8FNvUyAJlzW2fkFKjAahvNJ68MWmjemP0ax6tJb3WOyTecOQbeU6bHpSxfa9I97O_AYEdEHsZg83qPYPUP9ZlhD5pysIew_PRs8x02d_R4z1FM7k-vLmNg9L5aHEgmtWki3fooF_hXFM3OQ', TRUE, '🌟 追逐星星的孩子，希望能造出一艘通往火星的飞船。', 2850, 128, 56, FALSE),
-(2, '爱因斯坦的猫', 'https://lh3.googleusercontent.com/aida-public/AB6AXuASINkmpudePW0W6pdsTVAPd3BtzrHLjr6FQhhW3OqyUqlQVryDNpbqbqYS45c8873zvUvq0FlVVJ8l_RiFaEtwA1bb-olmAcl8jnIH2ya22L00BNSKHovsNaclbnPagLTI2lbP4_5NymbK0VDArGW38FhJUSuhxEOSuLUHAM8JPMemhyVms_ZIw1A1vetaj9-MFBKAh_WsZzTAJckAZYfBF5LN4qdIBtXO04vMu5NYyWDYcyfWUA_QMNVxxePZvQMmkIeNTUqOegM', TRUE, NULL, 0, 0, 0, FALSE),
-(3, '银河漫游者', 'https://lh3.googleusercontent.com/aida-public/AB6AXuA5sCzXtBejX0yCFvi6d6ppeQoCHyCkkjwr4FJVJuxdyPpZyrUaMTlv4HjDRiTS-HXni9zoALuVzJBX3vnT52vYJjpsLGZJCxKg25OMI19G_J7su5Q-h_Et7WNpuVqyeNn-xSqh5FD-97uSdFv9h5f_W0tLv7L8CGlqOxeKl2YPGUZpXfbbEif1PjxPecGjzSxDamCqVg6D-XveYAQ85Q72243NHMIfBv4lCTHn2UUynJKm7c2jTayR_L3RjTuSQzPR88oZN4uWcs', FALSE, NULL, 0, 0, 0, FALSE),
-(4, '克隆博士', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAw9VMPP_SS_Zrf62BjKx_g5vO1NQXHug6CDeIR-Qu4r4X3bZl2Pj-PesqEWoH3uYDIvWrVfLD0KE9Tu2XhCBU3l__0mgui6k5ZOE-NwwERvPiuYrOdjVPRsxsga_PnO8Bx8AmmcqzTm-Z68QnWYl_RNE1cCspkuvntRb4ZVNFufnaWUz9B6n_-_BRiYOMivjVBI6hJbA5od2Gc9LqI4hDOGGMjvxT0vPkdqVra4CMvQ7D2meAXyeI9u3Prgy6XwpdD3I2zGmgzknQ', FALSE, NULL, 0, 0, 0, FALSE),
-(5, '天空捕手', 'https://lh3.googleusercontent.com/aida-public/AB6AXuA90z9dSDKdmwPp6iUgzo0AMOdSvl1nDv9-FwGDXC73GrQVTslcitp1MyC0zP3fwvhM12Pmn6e4kd5McY5l-rrsAY5Vfw7SmdJMbU4Va3YtboI3nk-LPlkTiMeQFU_rowLxcPEjmyCETJWmw4cZFDAg6JlCJIX-xjwUFZam-64lvUDtMJyvkMrKVkHF3_rNoyQX9qbSzDdFevVoCuape5NZui--Hmf3ckaEMWVnZH_0ClxGsddddLXqPNvd2oRRK9nAQ_3Mz-Uc7Y', FALSE, NULL, 0, 0, 0, FALSE),
-(6, '李雷', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAaLMwbWZZ5ktDlJg_Yp0844qQC1t_xjPGaYbYoVjtjk4UFBp1MJ70wyYPQF2RpqFaLelhTyuibgWJSNYMGRAh3W4Z7qkXNA5PERd8C56B1IZxa9u2nM2rtmOyYYa1ccG2VZWUs_2okuXT1cy71zgR7PdXdsNvLc8vQjx4E1OkOMovmZmsVBZlMLPPZQdEnOClL5lXdySzs9oxWMFYnlu7JPYTg2exxTT7qBzwVX0ZCx7KvH_8m35OZkZgGC0jq27OgPvqDyNBUWiE', TRUE, NULL, 0, 0, 0, FALSE),
-(7, 'David', 'https://lh3.googleusercontent.com/aida-public/AB6AXuB5c877kvO940oVQ30CEgfJPTNr1VRjhB68yBTLrg2CNlZYtxiYA7CYLkeUG_qq6UQ-jur4qjeuSxwxlI8dnwo7HKapJknTbAdxxIcGwJ_kbnQ_NDuJZ8dvYeP2IQmqLAUKd_a2fJlG475wZ64CdruMir3wZdNgaKU3jERFve77pXK71REYJ05KcP7lNL7r9E9lBwP0GuUTlDyCBbNbbn3twIhFzI4o_soGtTD3j7LXrtsNzG_oqLO7iE6AKloBECcg_3H1VNn9dmc', FALSE, NULL, 0, 0, 0, FALSE),
-(8, 'Kepler-22b', NULL, FALSE, NULL, 0, 0, 0, FALSE),
-(9, 'Sarah', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAl_4UeOkX4eRiXak4TmcG72C8U-r9XEijYYfddNtSHUGCbHdx1qKcBOsdjvx3lG6xJQCm7tUPMP2v0fLbIWLKHOtxFlTi1cFAo8gHfTIgr22r2OmQM8X-BPFGwAWbnf2zZzF4V5KYSo4a7ko2sOaGkhWbJYsWoRtBuC3l_PTBcf2_fxMa_KyQFwadxa8AXQyA49gQx8EhCtb6OuA0_YmmlgxDEMCGAPdN9xVAI82ztQVsILQdLGJ1O6Rpb6bojo6b7Yi8XsR6IM5w', FALSE, NULL, 0, 0, 0, FALSE);
+INSERT INTO users (id, name, avatar, verified, bio, energy, followers, following, role) VALUES
+(1, '老王杂货铺', 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=200&h=200', TRUE, '守在街角二十年的杂货铺老板。想给店门前的流浪狗搭个坚固的窝。', 1500, 320, 15, 'user'),
+(2, '夜班出租司机', 'https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&q=80&w=200&h=200', TRUE, '跑了八年夜班。收集了无数个凌晨四点城市的故事。', 850, 642, 48, 'user'),
+(3, '社区美术老师', 'https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&q=80&w=200&h=200', FALSE, '教社区里的退休老人和留守儿童画水彩，色彩是可以治愈人心的。', 1200, 890, 120, 'user'),
+(4, '阳台园丁', 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=200&h=200', FALSE, '在五平米的阳台上种出了三十种香草，偶尔也种胡萝卜。', 2100, 150, 88, 'user'),
+(5, '乡村放映员', 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=200&h=200', TRUE, '开着一辆旧面包车，带着幕布和投影仪，在各个山村放免费露天电影。', 450, 2300, 15, 'user'),
+(6, '失眠的主厨', 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=200&h=200', FALSE, '在一家不怎么赚钱的深夜小馆子里，研究治愈深夜 emo 的浓汤。', 890, 5600, 50, 'user'),
+(7, '退役消防员', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200', TRUE, '腿脚不太方便了，但还想继续为社区做点什么。', 600, 1200, 35, 'user'),
+(8, '手账女孩小林', 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200&h=200', FALSE, '用手账记录普通生活里的琐碎闪光点，相信笔尖的温度。', 3200, 480, 200, 'user');
+
+-- 管理员账户 (密码: admin123456)
+INSERT INTO users (id, name, password_hash, role, bio, energy, verified) VALUES
+(9, 'admin', '$2b$10$rTIb47IRQaRp/IHi9uWBWuw9Kg8Uq.XG5n32pM.6lTC/P7R39iND.', 'admin', '🛡️ 系统管理员，维护梦境的秩序。', 99999, TRUE)
+ON CONFLICT (name) DO NOTHING;
 
 -- 重置序列
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
 
--- 插入分类数据
+-- 插入分类数据 (原分类，外加一个实际上由前端作为过滤器的"造梦完成"，类别保留现实向即可)
 INSERT INTO categories (id, name, emoji) VALUES
-(1, '科幻未来', '🚀'),
-(2, '艺术创作', '🎨'),
-(3, '改变世界', '🌍'),
-(4, '游戏开发', '🕹️'),
+(1, '社区改造', '🏘️'),
+(2, '温暖传递', '☕'),
+(3, '艺术创作', '�'),
+(4, '自然生态', '🌱'),
 (5, '独立影视', '🎬');
-
 SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));
 
 -- 插入梦想数据
-INSERT INTO dreams (id, title, description, author_id, category, emoji, progress, energy, goal, is_completed, supporters, likes, comments_count, cover_image, featured, impossible_index) VALUES
-(1, '造时光机', '关于时间旅行的设想，最初源于那个夏夜看完霍金的《时间简史》。如果光速是不可逾越的鸿沟，那思维的速度呢？我想造一台时光机，不为了改变过去，只为了再看一眼那个已经消失在时间长河里的旧书店。它虽然不符合广义相对论，但它符合我的浪漫主义相对论。', 2, '科幻未来', '⏳', 98, 980, 1000, FALSE, 2345, 1200, 128, 'https://lh3.googleusercontent.com/aida-public/AB6AXuDFYHHx1japTqyngTXjfnwRZ58g9dGRwcA91PpCfaLmE4EpxaQO-vnWfe9Pig3HS-hQoPbYK-36cHZYyjKoyA6JWqYMxLrvMn4kKbmw1NM5Ba-yWZVAqCKS4e5xthM6XnAGL7uZs1xQ5NqvO7w8qF6mD_tpgZCXpHFZVymJwWiKE1OCsIHignvHUeB7T2VzXsCXcUlUhnYLHFF-12pU617dJeRYs_kmGYQk4SQD72zxRSzr1C3kChDJPuDySrhwPvbztV2tpdCjyUU', TRUE, 98),
-(2, '跨星际翻译器', '为了听懂家里猫在说什么，它最近眼神很奇怪...也许它能告诉我一些宇宙的秘密。', 3, '科幻未来', '👾', 85, 425, 500, FALSE, 856, 3400, 45, 'https://lh3.googleusercontent.com/aida-public/AB6AXuCJ2trCuoIX7aPezJ2Xu2XcTQlhIKwf9Hb5-T7Ht4emASXIvaH_BZz9xoiDaZq-xNTUU8LcZHlTyQxGYAuWKLjwwagwxXcq40h9zMdQNgPoKbUvwQfzJg4S_JOTpyI8aCgytFT96uxjZVPD2Tz4iKopOPqvMhSPhyJtjfEVn8pDDm62gt3WwTD7BTJLPEkbkj_8OhnZsby2y8KgX7b3_DZhnvATaXyup95gt-SHW2aoGUndWV_I2qrsjVO2pVc3wFOznBV-n76Q7AI', FALSE, 85),
-(3, '私人克隆岛', '一个只有我自己克隆体的岛屿，不再有社交焦虑...', 4, '改变世界', '§', 75, 1575, 2100, FALSE, 2100, 980, 89, NULL, FALSE, 75),
-(4, '云朵城堡', '住在云上，随风飘荡，不用交房租...', 5, '艺术创作', '▓', 60, 2700, 4500, FALSE, 4500, 12000, 156, NULL, FALSE, 60),
-(5, '发明任意门', '一扇可以通往任何回忆和未来的门，我想再次见到小时候的院子。', 6, '时空', '🚪', 98, 839, 856, FALSE, 856, 1200, 32, 'https://lh3.googleusercontent.com/aida-public/AB6AXuAaHf1iMzDv5sX9XuQHTL3xMqXexwtCtNyrAgfvSZ7BBCUNTA8K_d0BtOHqsjern8bEXmlYNREGaZLK8Y_6O3Lbg3qrBTIElOo2f01fdkEl8eR-VwICL4wU0j2bf3koy2S5ZBWXIy2Y9OwIfHD-QTQBOVCOVN9_NEnV2AfiTIkQ5IjttRD2x9jGYp7ZJpk7s4Da3iLCxJObTizJqK0MfrkX7csP3-77G3KZml_MyEkJXZwudz_xSpxo7Qd4pQcHUEpWNgjBkmj_PmA', TRUE, 98),
-(6, '火星第一座温室', '为了种出红色的玫瑰，我们需要先建立完整的生态循环系统。', 7, '科幻未来', '🌹', 45, 555, 1234, FALSE, 1234, 2100, 67, 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPpm40FHsrcgLkIJg67WsOARkKkXhrwVF7SL9_JdJYRnVBGy7N_AbTDi54PFTgCdXnyiVo5pzuuo-z_Egwg3K3pAc2cK2YA_rtDOShAM3vO7pxwHOXOIYSXnSvZwRB3mNpI1yWUdPzGnQyTvs4nNj8W5YTHfgrL49XIQx7DTHHxCKao-fi2dGpA0NfGtXbQg8TgQmNb_wSyIbcgrR6TIhSezEeMTOrKqUraDnkemnHm-srU9QTxgaoWXeDgkmg4c7runX3z_warLE', FALSE, 70),
-(7, '机械之心', '当最后一个自然心脏停止跳动，文明将由永动机重新定义。Forked from @Dr_Light', 8, '克隆', '🤖', 100, 454, 567, TRUE, 567, 890, 23, 'https://lh3.googleusercontent.com/aida-public/AB6AXuCJ2trCuoIX7aPezJ2Xu2XcTQlhIKwf9Hb5-T7Ht4emASXIvaH_BZz9xoiDaZq-xNTUU8LcZHlTyQxGYAuWKLjwwagwxXcq40h9zMdQNgPoKbUvwQfzJg4S_JOTpyI8aCgytFT96uxjZVPD2Tz4iKopOPqvMhSPhyJtjfEVn8pDDm62gt3WwTD7BTJLPEkbkj_8OhnZsby2y8KgX7b3_DZhnvATaXyup95gt-SHW2aoGUndWV_I2qrsjVO2pVc3wFOznBV-n76Q7AI', FALSE, 95),
-(8, '云端城堡计划', '生活在积雨层之上的可能性探索。', 9, '预言', '☁️', 25, 86, 345, FALSE, 345, 567, 18, NULL, FALSE, 80);
+-- 注意：id 1, 3 是已完成的梦想 (is_completed=true 或 energy>=goal)
+INSERT INTO dreams (id, title, description, author_id, category, emoji, progress, energy, goal, is_completed, supporters, likes, comments_count, cover_image, featured, impossible_index, rating_count) VALUES
+(1, '给巷子口的流浪狗做个防雨木屋', '店门前那只叫“大黄”的流浪狗陪了我三年。马上要到梅雨季节了，我想在店旁边的巷角用防水木板给它搭一个坚固的狗窝。不需要太大，只要能遮风挡雨就好。能量主要用来购买厚实的防腐木材和防水油漆，我自己动手做。', 1, '社区改造', '🐕', 100, 1000, 1000, TRUE, 100, 890, 45, 'https://images.unsplash.com/photo-1544568100-847a95782782?auto=format&fit=crop&q=80&w=800&h=500', TRUE, 4.20, 156),
+(2, '深夜回车族免费热汤点', '凌晨两三点下班的人，往往只能吃便利店冰冷的便当。我的出租车经常拉到半夜疲惫的打工人，我想和常去的老板娘合作，在某个固定的街角设一个通宵的免费热汤点（或者仅仅是白粥）。一杯热的，或许能让他们觉得这座城市没那么冷。', 2, '温暖传递', '🍲', 65, 1300, 2000, FALSE, 130, 2100, 89, 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 3.80, 89),
+(3, '胡同弄堂墙绘计划', '我们社区的那面老墙斑驳脱落很久了，我想带着社区里喜欢画画的老人和孩子们，用一个周末的时间给那面墙画上一片向日葵花海。不仅仅是为了美化，更想让那些独居的爷爷奶奶们有个共同参与的活动。目前颜料和画笔已准备妥当！', 3, '艺术创作', '�', 100, 3000, 3000, TRUE, 300, 520, 32, 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 4.50, 65),
+(4, '阳台种子漂流瓶', '我的阳台上收获了很多自己结种子的香草（罗勒、迷迭香、薄荷）。我想买一批漂亮的小玻璃瓶，把这些种子分装好，贴上手绘的种植指南，放在街角的免费分享箱里。希望城市的每个人都能在窗台上种出属于自己的一抹绿色和香气。', 4, '自然生态', '🌿', 20, 1000, 5000, FALSE, 100, 310, 12, 'https://images.unsplash.com/photo-1595856980646-976adfa57e62?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 3.90, 204),
+(5, '留守儿童露天星空影院', '在这个数字时代，电影院依然是某些偏远山区孩子们难以触及的梦想。我计划改造我的二手面包车，装上更好的便携抗光幕布和音响，带去五个没有村级影院的山口村落，为孩子们放一夏天的宫崎骏和科普纪录片。能量将用于油费和幕布升级。', 5, '独立影视', '📽️', 70, 2100, 3000, FALSE, 210, 4050, 240, 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 4.80, 180),
+(6, '深夜失眠菜谱图鉴', '那些治愈不了的深夜焦虑，只能通过肠胃来缓解。我正在手绘一本《午夜碳水救赎指南》，里面记录了20道步骤极简、却能迅速带来幸福感的热水快手菜。希望筹集一笔资金将这本手绘小册子独立印刷出来，免费寄给同样受失眠困扰的人。', 6, '艺术创作', '�', 95, 3800, 4000, FALSE, 380, 5600, 310, 'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&q=80&w=800&h=500', TRUE, 4.10, 420),
+(7, '社区急救技能公益课', '很多悲剧原本可以在救护车赶到前的黄金五分钟内避免。作为退役消防员，我想在周末时间，在社区的空地开办公益急救课（海姆立克急救法、CPR心肺复苏）。筹集的能量完全用于购买三个练习用的医用假人模型和一些必要的消耗性绷带。', 7, '社区改造', '🚑', 45, 900, 2000, FALSE, 90, 120, 45, 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 4.60, 76),
+(8, '手账边角料回收计划', '做手账总是会有很多好看的包装纸、贴纸边角料被扔掉，很可惜。我想做一个月度的“碎屑盲盒”交换漂流活动。收集大家平时不用但好看的小纸片，重新拼贴后作为礼物寄给全国各地的手账爱好者。传递陌生人之间微小的美好。', 8, '温暖传递', '✉️', 85, 850, 1000, FALSE, 85, 420, 88, 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=800&h=500', FALSE, 2.50, 34);
 
 SELECT setval('dreams_id_seq', (SELECT MAX(id) FROM dreams));
 
--- 插入动态数据
-INSERT INTO feed_activities (id, type, user_id, target_dream_id, time_ago, action_color) VALUES
-(1, 'sponsor', 6, 5, '5 分钟前', 'primary'),
-(2, 'publish', 9, 8, '12 分钟前', 'blue'),
-(3, 'fork', 8, 7, '32 分钟前', 'green'),
-(4, 'sponsor', 7, 6, '1 小时前', 'primary');
+-- 为已完成的项目（id=1, 3）插入赞助记录
+INSERT INTO dream_sponsors (dream_id, user_id, sponsor_date)
+SELECT 1, id, CURRENT_DATE FROM users WHERE id IN (2,3,4,5);
+INSERT INTO dream_sponsors (dream_id, user_id, sponsor_date)
+SELECT 3, id, CURRENT_DATE FROM users WHERE id IN (1,2,6,7,8);
 
-SELECT setval('feed_activities_id_seq', (SELECT MAX(id) FROM feed_activities));
+-- 插入一些动态数据
+INSERT INTO feed_activities (type, user_id, target_dream_id, time_ago, action_color) VALUES
+('sponsor', 5, 2, '5 分钟前', 'primary'),
+('publish', 1, 1, '12 分钟前', 'blue'),
+('sponsor', 2, 4, '32 分钟前', 'primary'),
+('publish', 4, 4, '1 小时前', 'blue'),
+('sponsor', 8, 3, '2 小时前', 'primary');
 
--- 插入通知数据
-INSERT INTO notifications (id, type, user_id, target_dream_id, content, time_ago, read, reward) VALUES
-(1, 'like', 3, 1, NULL, '5 分钟前', FALSE, NULL),
-(2, 'comment', 9, 1, NULL, '12 分钟前', FALSE, NULL),
-(3, 'sponsor', 6, 1, NULL, '1 小时前', FALSE, NULL),
-(4, 'achievement', NULL, NULL, '恭喜！你的梦想「造时光机」已达成目标，获得 1000 能量奖励！', '2 小时前', FALSE, 1000),
-(5, 'achievement', NULL, NULL, '你的梦想「跨星际翻译器」已达成目标，获得 500 能量奖励！', '3 小时前', FALSE, 500),
-(6, 'like', 4, 3, NULL, '5 小时前', TRUE, NULL);
-
-SELECT setval('notifications_id_seq', (SELECT MAX(id) FROM notifications));
+-- 插入部分通知数据
+INSERT INTO notifications (type, user_id, target_dream_id, content, time_ago, read, reward) VALUES
+('like', 5, 1, NULL, '5 分钟前', FALSE, NULL),
+('comment', 2, 1, NULL, '12 分钟前', FALSE, NULL),
+('sponsor', 8, 3, NULL, '1 小时前', FALSE, NULL),
+('achievement', 1, 1, '恭喜！你的梦想「给巷子口的流浪狗做个防雨木屋」已达成目标，获得 1000 能量奖励！', '2 小时前', FALSE, 1000),
+('achievement', 3, 3, '恭喜！你的梦想「胡同弄堂墙绘计划」已达成目标，获得 3000 能量奖励！', '2 小时前', FALSE, 3000),
+('like', 4, 6, NULL, '5 小时前', TRUE, NULL);
 
 -- 插入评论数据
-INSERT INTO comments (id, dream_id, user_name, user_avatar, user_initials, text, time_ago) VALUES
-(1, 1, 'LostStar_99', NULL, 'L', '虽然听起来很疯狂，但我愿意为了这个梦买单。算我一个！🚀', '1小时前'),
-(2, 1, 'Neo_Matrix', 'https://lh3.googleusercontent.com/aida-public/AB6AXuADqfg_qFcPc3pkSRbojloqRu3N3OzpfHZlN-CYcu17WISA_lW02xqpz6fd2ALX1texKXDt04ny6JRjXAiV0STwHNhlL6PxTCojxTJAibv3lm_7vvAi1ZyGd3CMCMHsh6ZbZoY2BfUHfoJJwm2EhlX7W8-Q1N4-qIa6NXuW88EZhA_7Gi1wsRYWpb2_AjJhZn8O7QnlShHXuwMKhu2rFexeslmnX2g3fEqvGCp-Q08QyjSCnMa2ldVzKQzvLofmtDjfMKN8W03h8Ks', NULL, '霍金举办过一次面向未来的时间旅行者派对，没人参加。也许你的机器能带我们去那场派对？', '3小时前');
-
-SELECT setval('comments_id_seq', (SELECT MAX(id) FROM comments));
+INSERT INTO comments (dream_id, user_name, user_avatar, user_initials, text, time_ago) VALUES
+(1, '退役消防员', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200', NULL, '木材记得在底部垫高一点，下雨天容易积水。如果需要帮忙搬木头，周末随时叫我。', '1小时前'),
+(1, '手账女孩小林', 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200&h=200', NULL, '大黄有家了！太好了！老板可以把狗窝漆成黄色吗，跟它很搭～', '3小时前'),
+(2, '失眠的主厨', 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=200&h=200', NULL, '好想法。如果你找不到合作的老板娘，可以来我店门口摆个保温桶，我免费帮你熬粥。', '5小时前'),
+(4, '社区美术老师', 'https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&q=80&w=200&h=200', NULL, '玻璃瓶手刷标签太可爱了，我可以带画室里的孩子们帮你一起画指南卡片吗？', '半天前'),
+(7, '夜班出租司机', 'https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&q=80&w=200&h=200', NULL, '这种课真的很有必要。我们开夜车的心里总是突突的，学点急救对自己对乘客负责。', '1天前');

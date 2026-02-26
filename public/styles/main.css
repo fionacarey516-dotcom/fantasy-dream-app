@@ -189,3 +189,28 @@ body {
     background: linear-gradient(to top, #1a0f23 0%, #1a0f23 85%, rgba(26, 15, 35, 0.9) 95%, transparent 100%);
     backdrop-filter: blur(8px);
 }
+
+/* Star rating interactive glow */
+.star-rating button:hover ~ button {
+    color: rgba(250, 204, 21, 0.3) !important;
+}
+
+/* Dream card hover lift */
+.dream-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.dream-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(200, 128, 255, 0.15);
+}
+
+/* Custom range slider track */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+/* Fade transition for pages */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}

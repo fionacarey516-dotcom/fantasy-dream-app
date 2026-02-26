@@ -42,6 +42,7 @@ async function handleLogin() {
         const result = await api.login(name, password);
         localStorage.setItem('auth_token', result.token);
         localStorage.setItem('current_user', JSON.stringify(result.user));
+        window.currentUser = result.user;
         await loadAllData();
         navigateTo('home');
         showNotification('登录成功', `欢迎回来，${result.user.name}！`, 'success');
@@ -58,6 +59,7 @@ async function handleRegister() {
         const result = await api.register(name, password);
         localStorage.setItem('auth_token', result.token);
         localStorage.setItem('current_user', JSON.stringify(result.user));
+        window.currentUser = result.user;
         await loadAllData();
         navigateTo('home');
         showNotification('注册成功', `欢迎，${result.user.name}！赠送100能量`, 'success');
@@ -67,6 +69,7 @@ async function handleRegister() {
 function handleLogout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('current_user');
+    window.currentUser = null;
     navigateTo('home');
     showNotification('已退出', '期待你的再次归来', 'info');
 }
@@ -883,12 +886,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     await loadPublicData();
 
     if (isLoggedIn()) {
+        window.currentUser = getCurrentUser();
         const success = await loadAllData();
         if (!success) {
             // Token may be invalid
             localStorage.removeItem('auth_token');
             localStorage.removeItem('current_user');
+            window.currentUser = null;
         }
+    } else {
+        window.currentUser = null;
     }
 
     initializeRouter();

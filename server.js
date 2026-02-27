@@ -26,8 +26,13 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🌙 梦嘢 App running at http://localhost:${PORT}`);
-    console.log(`📡 API available at http://localhost:${PORT}/api`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Start server locally (when run directly, not imported by Vercel)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🌙 梦嘢 App running at http://localhost:${PORT}`);
+        console.log(`📡 API available at http://localhost:${PORT}/api`);
+    });
+}

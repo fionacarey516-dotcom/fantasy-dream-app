@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
+const JWT_SECRET = process.env.JWT_SECRET || 'mengye-app-secret-key-2026';
 
 // GET /api/notifications - 获取通知列表
 router.get('/', async (req, res) => {
@@ -9,7 +11,7 @@ router.get('/', async (req, res) => {
         let userId = null;
         if (token) {
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fantasy-dream-secret-key-2024');
+                const decoded = jwt.verify(token, JWT_SECRET);
                 userId = decoded.userId;
             } catch (e) {
                 // Ignore invalid token here
@@ -24,8 +26,7 @@ router.get('/', async (req, res) => {
             .from('notifications')
             .select(`
                 *,
-                user:users!notifications_user_id_fkey(id, name, avatar),
-                dream:dreams!notifications_target_dream_id_fkey(id, title)
+                actor:users!notifications_actor_id_fkey(id, name, avatar)
             `)
             .or(`user_id.eq.${userId},user_id.is.null`)
             .order('created_at', { ascending: false });
@@ -67,9 +68,9 @@ router.get('/', async (req, res) => {
         const notifications = filteredNotifications.map(n => ({
             id: n.id,
             type: n.type,
-            user: n.user ? {
-                name: n.user.name,
-                avatar: n.user.avatar
+            user: n.actor ? {
+                name: n.actor.name,
+                avatar: n.actor.avatar
             } : null,
             targetDream: n.target_dream_id,
             content: n.content,

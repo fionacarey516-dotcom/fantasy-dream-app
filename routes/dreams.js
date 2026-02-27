@@ -371,6 +371,20 @@ router.post('/:id/sponsor', async (req, res) => {
             action_color: 'primary'
         });
 
+        // 通知梦想作者（不通知自己）
+        if (dream.author_id !== userId) {
+            const { data: sponsor } = await supabase.from('users').select('name').eq('id', userId).single();
+            await supabase.from('notifications').insert({
+                type: 'sponsor',
+                user_id: dream.author_id,
+                actor_id: userId,
+                target_dream_id: dreamId,
+                content: `${sponsor?.name || '有人'} 赞助了你的梦想`,
+                time_ago: '刚刚',
+                read: false
+            });
+        }
+
         res.json({
             success: true,
             newEnergy: user.energy - 10,
@@ -451,17 +465,30 @@ router.post('/:dreamId/comments', async (req, res) => {
         if (error) throw error;
 
         // 更新梦想评论数
-        const { data: dreamData } = await supabase
+        const { data: dreamForComment } = await supabase
             .from('dreams')
-            .select('comments_count')
+            .select('comments_count, author_id')
             .eq('id', parseInt(dreamId))
             .single();
 
-        if (dreamData) {
+        if (dreamForComment) {
             await supabase
                 .from('dreams')
-                .update({ comments_count: dreamData.comments_count + 1 })
+                .update({ comments_count: dreamForComment.comments_count + 1 })
                 .eq('id', parseInt(dreamId));
+
+            // 通知梦想作者（不通知自己）
+            if (dreamForComment.author_id !== userId) {
+                await supabase.from('notifications').insert({
+                    type: 'comment',
+                    user_id: dreamForComment.author_id,
+                    actor_id: userId,
+                    target_dream_id: parseInt(dreamId),
+                    content: `${user.name} 评论了你的梦想`,
+                    time_ago: '刚刚',
+                    read: false
+                });
+            }
         }
 
         res.status(201).json({
@@ -477,6 +504,46 @@ router.post('/:dreamId/comments', async (req, res) => {
     } catch (error) {
         console.error('Error posting comment:', error);
         res.status(500).json({ error: 'Failed to post comment' });
+    }
+});
+
+// POST /api/dreams/:id/like - 点赞梦想
+router.post('/:id/like', async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ error: '请先登录' });
+
+        const dreamId = parseInt(req.params.id);
+
+        const { data: dream, error: dreamError } = await supabase
+            .from('dreams')
+            .select('likes, author_id')
+            .eq('id', dreamId)
+            .single();
+
+        if (dreamError || !dream) return res.status(404).json({ error: '梦想不存在' });
+
+        const newLikes = (dream.likes || 0) + 1;
+        await supabase.from('dreams').update({ likes: newLikes }).eq('id', dreamId);
+
+        // 通知作者（不通知自己）
+        if (dream.author_id !== userId) {
+            const { data: liker } = await supabase.from('users').select('name').eq('id', userId).single();
+            await supabase.from('notifications').insert({
+                type: 'like',
+                user_id: dream.author_id,
+                actor_id: userId,
+                target_dream_id: dreamId,
+                content: `${liker?.name || '有人'} 点赞了你的梦想`,
+                time_ago: '刚刚',
+                read: false
+            });
+        }
+
+        res.json({ success: true, likes: newLikes });
+    } catch (error) {
+        console.error('Error liking dream:', error);
+        res.status(500).json({ error: '点赞失败' });
     }
 });
 

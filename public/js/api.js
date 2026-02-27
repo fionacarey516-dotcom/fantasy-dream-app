@@ -131,6 +131,11 @@ const api = {
         return this.request('/api/feed');
     },
 
+    // 点赞梦想
+    async likeDream(dreamId) {
+        return this.request(`/api/dreams/${dreamId}/like`, { method: 'POST' });
+    },
+
     // ========== Notifications ==========
 
     // 获取通知列表

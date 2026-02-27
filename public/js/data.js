@@ -42,24 +42,38 @@ async function loadPublicData() {
 // 从 API 加载所有数据（需要登录）
 async function loadAllData() {
     try {
-        const [dreams, feed, notifications, profile, categories] = await Promise.all([
+        const [dreams, feed, categories] = await Promise.all([
             api.getDreams(),
             api.getFeed(),
-            api.getNotifications(),
-            api.getProfile(),
             api.getCategories()
         ]);
 
         dreamData.dreams = dreams;
         dreamData.feed = feed;
-        dreamData.notifications = notifications;
-        dreamData.userProfile = profile;
         dreamData.categories = categories;
 
-        return true;
+        // Load user-specific data separately so a single failure doesn't break everything
+        try {
+            const [notifications, profile] = await Promise.all([
+                api.getNotifications(),
+                api.getProfile()
+            ]);
+            dreamData.notifications = notifications;
+            dreamData.userProfile = profile;
+        } catch (userError) {
+            // If this is an auth error (401), propagate it
+            if (userError.message && (userError.message.includes('401') || userError.message.includes('登录') || userError.message.includes('Token'))) {
+                return 'auth_error';
+            }
+            // Otherwise it's a network error, keep the token but skip user data
+            console.warn('Failed to load user-specific data (network issue), keeping session:', userError.message);
+        }
+
+        return 'success';
     } catch (error) {
-        console.error('Failed to load data from API:', error);
-        return false;
+        console.error('Failed to load public data from API:', error);
+        // Don't clear token for network errors
+        return 'network_error';
     }
 }
 

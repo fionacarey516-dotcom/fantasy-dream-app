@@ -42,7 +42,6 @@ async function handleLogin() {
         const result = await api.login(name, password);
         localStorage.setItem('auth_token', result.token);
         localStorage.setItem('current_user', JSON.stringify(result.user));
-        window.currentUser = result.user;
         await loadAllData();
         navigateTo('home');
         showNotification('登录成功', `欢迎回来，${result.user.name}！`, 'success');
@@ -59,7 +58,6 @@ async function handleRegister() {
         const result = await api.register(name, password);
         localStorage.setItem('auth_token', result.token);
         localStorage.setItem('current_user', JSON.stringify(result.user));
-        window.currentUser = result.user;
         await loadAllData();
         navigateTo('home');
         showNotification('注册成功', `欢迎，${result.user.name}！赠送100能量`, 'success');
@@ -69,7 +67,6 @@ async function handleRegister() {
 function handleLogout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('current_user');
-    window.currentUser = null;
     navigateTo('home');
     showNotification('已退出', '期待你的再次归来', 'info');
 }
@@ -275,6 +272,18 @@ function filterDreams(filterType, btn) {
     if (grid) { grid.innerHTML = filtered.length > 0 ? filtered.map(d => renderDreamCard(d)).join('') : '<p class="text-slate-500 text-sm text-center py-8 col-span-2">暂无符合条件的梦想</p>'; }
 }
 
+async function showNotificationsPage() {
+    const pageContent = document.getElementById('page-content');
+    pageContent.innerHTML = '<div class="flex justify-center items-center py-24"><div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>';
+    try {
+        const notifications = await api.getNotifications();
+        dreamData.notifications = notifications;
+        pageContent.innerHTML = '<div class="fade-in">' + renderNotificationsPage() + '</div>';
+    } catch (e) {
+        pageContent.innerHTML = '<div class="text-center py-24 text-slate-400"><div class="text-4xl mb-3">📭</div><p>无法加载通知</p><p class="text-xs mt-2 text-red-400">' + e.message + '</p></div>';
+    }
+}
+
 // ========== NOTIFICATIONS PAGE ==========
 function renderNotificationsPage() {
     const notifications = dreamData.notifications;
@@ -347,8 +356,30 @@ function renderFeedItem(activity, showConnector) {
 }
 
 // ========== PROFILE PAGE ==========
+async function showProfilePage() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = '<div class="flex justify-center items-center py-24"><div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>';
+    try {
+        const profile = await api.getProfile();
+        // Sync to dreamData and window.currentUser so other parts of the app stay in sync
+        dreamData.userProfile = profile;
+        const storedUser = getCurrentUser();
+        if (storedUser) {
+            const merged = { ...storedUser, ...profile };
+            localStorage.setItem('current_user', JSON.stringify(merged));
+        }
+        content.innerHTML = `<div class="fade-in">${renderProfileHTML(profile)}</div>`;
+    } catch (e) {
+        content.innerHTML = `<div class="text-center py-24 text-slate-400"><div class="text-4xl mb-3">😞</div><p>无法加载个人信息</p><p class="text-sm mt-2">${e.message}</p><button onclick="navigateTo('login')" class="mt-4 px-6 py-2 bg-primary text-white rounded-full text-sm">重新登录</button></div>`;
+    }
+}
+
+// Keep renderProfilePage as a fallback that renders from cache (used elsewhere)
 function renderProfilePage() {
-    const profile = dreamData.userProfile;
+    return renderProfileHTML(dreamData.userProfile);
+}
+
+function renderProfileHTML(profile) {
     return `
         <div class="relative w-full">
             <div class="h-48 w-full bg-gradient-to-b from-[#4a2b6b] to-background-dark relative overflow-hidden"><div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div></div>
@@ -360,9 +391,9 @@ function renderProfilePage() {
                     </div>
                 </div>
                 <div class="mt-3 text-center">
-                    <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2 justify-center">${profile.name}${profile.verified ? '<span class="material-symbols-outlined text-yellow-400 text-sm">verified</span>' : ''}</h1>
-                    <p class="text-slate-400 text-sm font-medium mt-1">粉丝 ${profile.followers} <span class="mx-1 opacity-30">|</span> 关注 ${profile.following}</p>
-                    <p class="text-slate-500 text-xs mt-2 max-w-[240px] leading-relaxed">${profile.bio || ''}</p>
+                    <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2 justify-center">${profile.name || ''}${profile.verified ? '<span class="material-symbols-outlined text-yellow-400 text-sm">verified</span>' : ''}</h1>
+                    <p class="text-slate-400 text-sm font-medium mt-1">粉丝 ${profile.followers || 0} <span class="mx-1 opacity-30">|</span> 关注 ${profile.following || 0}</p>
+                    <p class="profile-bio-text text-slate-500 text-xs mt-2 max-w-[240px] leading-relaxed">${profile.bio || ''}</p>
                 </div>
             </div>
         </div>
@@ -729,9 +760,10 @@ function renderDetailPage(dreamId) {
         </div>
         <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a0f23] via-[#1a0f23]/95 to-transparent pt-4 pb-8 px-5 z-40 max-w-md mx-auto">
             <div class="flex gap-3">
+                <button onclick="likeDream(${dream.id})" class="flex items-center justify-center w-10 h-10 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 hover:bg-pink-500/20 transition-colors shrink-0" title="点赞"><span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">favorite</span></button>
                 <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-primary flex items-center justify-center text-xs font-bold text-white shrink-0">${(getCurrentUser()?.name || 'U').charAt(0)}</div>
                 <div class="flex-1"><input id="comment-input" type="text" placeholder="写下你的评论..." class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all"></div>
-                <button onclick="submitComment(${dreamId})" class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors shrink-0"><span class="material-symbols-outlined text-lg">send</span></button>
+                <button onclick="submitComment(${dream.id})" class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors shrink-0"><span class="material-symbols-outlined text-lg">send</span></button>
             </div>
         </div>`;
 }
@@ -806,6 +838,23 @@ async function sponsorDream(dreamId) {
         showNotification('赞助成功', '已为梦想赞助10能量！', 'success');
         loadPageContent(currentPage, { dreamId });
     } catch (e) { showNotification('赞助失败', e.message, 'error'); }
+}
+
+async function likeDream(dreamId) {
+    if (!requireLogin()) return;
+    try {
+        const result = await api.likeDream(dreamId);
+        // Update the local dream data count
+        const dream = getDreamById(dreamId);
+        if (dream) dream.likes = result.likes;
+        // Visual feedback: pulse the like button
+        const likeBtn = document.querySelector(`button[onclick="likeDream(${dreamId})"]`);
+        if (likeBtn) {
+            likeBtn.classList.add('scale-125', 'text-pink-500');
+            setTimeout(() => likeBtn.classList.remove('scale-125', 'text-pink-500'), 300);
+        }
+        showNotification('已点赞 ❤️', '感谢你的支持！', 'success');
+    } catch (e) { showNotification('点赞失败', e.message, 'error'); }
 }
 
 async function claimDailyReward() {
@@ -886,16 +935,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     await loadPublicData();
 
     if (isLoggedIn()) {
-        window.currentUser = getCurrentUser();
-        const success = await loadAllData();
-        if (!success) {
-            // Token may be invalid
+        const result = await loadAllData();
+        if (result === 'auth_error') {
+            // Token is invalid or expired — force logout
             localStorage.removeItem('auth_token');
             localStorage.removeItem('current_user');
-            window.currentUser = null;
         }
-    } else {
-        window.currentUser = null;
+        // 'network_error' or 'success' — keep the session alive
     }
 
     initializeRouter();

@@ -27,12 +27,7 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`🌙 梦嘢 App running at http://localhost:${PORT}`);
-        console.log(`📡 API available at http://localhost:${PORT}/api`);
-    });
-}
-
-// Export for serverless (Vercel)
-module.exports = app;
+app.listen(PORT, () => {
+    console.log(`🌙 梦嘢 App running at http://localhost:${PORT}`);
+    console.log(`📡 API available at http://localhost:${PORT}/api`);
+});

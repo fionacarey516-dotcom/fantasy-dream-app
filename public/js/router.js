@@ -120,11 +120,11 @@ function loadPageContent(page, params = {}) {
                 html = renderFeedPage();
                 break;
             case 'notifications':
-                html = renderNotificationsPage();
-                break;
+                showNotificationsPage();
+                return; // handles its own async rendering
             case 'profile':
-                html = renderProfilePage();
-                break;
+                showProfilePage();
+                return; // showProfilePage handles its own rendering
             case 'create':
                 html = renderCreatePage();
                 break;

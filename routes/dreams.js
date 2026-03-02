@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
                 *,
                 author:users!dreams_author_id_fkey(id, name, avatar, verified)
             `)
+            .eq('status', 'approved')
             .order('created_at', { ascending: false });
 
         if (featured === 'true') {
@@ -64,7 +65,8 @@ router.get('/', async (req, res) => {
             coverImage: d.cover_image,
             featured: d.featured,
             impossibleIndex: parseFloat(d.impossible_index) || 0,
-            ratingCount: d.rating_count || 0
+            ratingCount: d.rating_count || 0,
+            status: d.status || 'approved'
         }));
 
         res.json(dreams);
@@ -162,6 +164,27 @@ router.post('/', async (req, res) => {
 
         const { title, description, emoji, goal, impossibleIndex, anonymous, coverImage } = req.body;
 
+        // 检查用户能量是否足够（发布梦想需要20积分）
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('energy')
+            .eq('id', userId)
+            .single();
+
+        if (userError) throw userError;
+
+        if (user.energy < 20) {
+            return res.status(400).json({ error: '积分不足，发布梦想需要消耗 20 积分' });
+        }
+
+        // 扣减 20 积分
+        const { error: deductError } = await supabase
+            .from('users')
+            .update({ energy: user.energy - 20 })
+            .eq('id', userId);
+
+        if (deductError) throw deductError;
+
         const { data, error } = await supabase
             .from('dreams')
             .insert({
@@ -179,7 +202,8 @@ router.post('/', async (req, res) => {
                 comments_count: 0,
                 is_completed: false,
                 featured: false,
-                cover_image: coverImage || null
+                cover_image: coverImage || null,
+                status: 'pending'  // 需要管理员审核后才公开
             })
             .select()
             .single();
@@ -195,16 +219,9 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // 创建动态记录
-        await supabase.from('feed_activities').insert({
-            type: 'publish',
-            user_id: anonymous ? null : userId,
-            target_dream_id: data.id,
-            time_ago: '刚刚',
-            action_color: 'blue'
-        });
+        // 注意：待审核的梦想不创建动态记录，审核通过后才创建
 
-        res.status(201).json(data);
+        res.status(201).json({ ...data, newEnergy: user.energy - 20 });
     } catch (error) {
         console.error('Error creating dream:', error);
         res.status(500).json({ error: 'Failed to create dream' });

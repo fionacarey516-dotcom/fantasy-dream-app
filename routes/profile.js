@@ -162,7 +162,8 @@ router.get('/my-dreams', async (req, res) => {
             category: d.category, emoji: d.emoji, progress: d.progress, energy: d.energy, goal: d.goal,
             isCompleted: d.is_completed, supporters: d.supporters, likes: d.likes, comments: d.comments_count,
             coverImage: d.cover_image, featured: d.featured,
-            impossibleIndex: parseFloat(d.impossible_index) || 0, ratingCount: d.rating_count || 0
+            impossibleIndex: parseFloat(d.impossible_index) || 0, ratingCount: d.rating_count || 0,
+            status: d.status || 'approved'
         }));
         res.json(dreams);
     } catch (error) {

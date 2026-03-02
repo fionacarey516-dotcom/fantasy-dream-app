@@ -20,6 +20,16 @@ app.use('/api/feed', require('./routes/feed'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/categories', require('./routes/categories'));
+app.use('/api/admin', require('./routes/admin'));
+
+// Serve admin panel
+app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
 
 // Catch-all: serve index.html for SPA routing
 app.get('*', (req, res) => {

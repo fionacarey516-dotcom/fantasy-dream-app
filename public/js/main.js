@@ -303,6 +303,8 @@ function renderNotificationItem(notification) {
         case "comment": icon = `<span class="material-symbols-outlined text-blue-500" style="font-variation-settings: 'FILL' 1;">comment</span>`; iconBg = "bg-blue-500/20"; actionText = "评论了你的梦想"; break;
         case "sponsor": icon = `<span class="material-symbols-outlined text-green-500" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>`; iconBg = "bg-green-500/20"; actionText = "赞助了你的梦想"; break;
         case "achievement": icon = `<span class="material-symbols-outlined text-yellow-500" style="font-variation-settings: 'FILL' 1;">celebration</span>`; iconBg = "bg-yellow-500/20"; break;
+        case "system": icon = `<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">campaign</span>`; iconBg = "bg-primary/20"; break;
+        case "refund": icon = `<span class="material-symbols-outlined text-cyan-400" style="font-variation-settings: 'FILL' 1;">currency_exchange</span>`; iconBg = "bg-cyan-500/20"; break;
         default: icon = `<span class="material-symbols-outlined text-slate-400">notifications</span>`; iconBg = "bg-slate-500/20";
     }
     const dream = notification.targetDream ? getDreamById(notification.targetDream) : null;
@@ -440,7 +442,18 @@ async function showMyDreams() {
 }
 
 function renderMyDreamCard(dream) {
-    return `<div class="relative">${renderDreamCard(dream)}<button onclick="event.stopPropagation(); confirmDeleteDream(${dream.id}, '${dream.title.replace(/'/g, "\\'")}')" class="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10" title="删除"><span class="material-symbols-outlined text-base">delete</span></button></div>`;
+    const statusBadge = dream.status === 'pending'
+        ? `<div class="absolute top-3 right-3 z-10 flex items-center gap-1 bg-yellow-500/80 backdrop-blur-sm px-2 py-0.5 rounded-full">
+            <span class="material-symbols-outlined text-[11px] text-white">schedule</span>
+            <span class="text-[10px] font-bold text-white">审核中</span>
+           </div>`
+        : (dream.status === 'rejected'
+            ? `<div class="absolute top-3 right-3 z-10 flex items-center gap-1 bg-red-500/80 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                <span class="material-symbols-outlined text-[11px] text-white">cancel</span>
+                <span class="text-[10px] font-bold text-white">已拒绝</span>
+               </div>`
+            : '');
+    return `<div class="relative">${renderDreamCard(dream)}${statusBadge}<button onclick="event.stopPropagation(); confirmDeleteDream(${dream.id}, '${dream.title.replace(/'/g, "\\'")}')" class="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10" title="删除"><span class="material-symbols-outlined text-base">delete</span></button></div>`;
 }
 
 function confirmDeleteDream(dreamId, title) {
@@ -643,6 +656,15 @@ function renderCreatePage() {
         <div class="flex items-center justify-between py-2 px-1 mb-6">
             <div class="flex flex-col"><span class="text-base font-medium text-white flex items-center gap-2"><span class="material-symbols-outlined text-slate-400">visibility_off</span>匿名发布</span><span class="text-xs text-slate-500">在这个梦想里，没有人知道你是谁</span></div>
             <label class="relative inline-flex items-center cursor-pointer"><input id="create-anonymous" class="sr-only peer" type="checkbox"><div class="w-12 h-7 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label>
+        </div>
+        <div class="flex flex-col gap-2 mb-3">
+            <div class="flex items-center justify-between px-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-yellow-400 text-base">bolt</span>
+                    <span class="text-yellow-300 text-xs font-medium">发布消耗 20 积分，经管理员审核后公开</span>
+                </div>
+                <span class="text-yellow-400/80 text-xs font-bold">-20⚡</span>
+            </div>
         </div>
         <button onclick="publishDream()" class="w-full py-4 bg-gradient-to-r from-primary to-purple-800 rounded-full text-white text-lg font-bold shadow-[0_0_20px_rgba(200,128,255,0.4)] btn-hover">🚀 发布梦想</button>`;
 }
@@ -899,7 +921,7 @@ async function publishDream() {
     }
 
     try {
-        await api.createDream({
+        const result = await api.createDream({
             title: title.trim(),
             description: desc?.trim() || '',
             goal: createPageState.goalValue,
@@ -907,9 +929,15 @@ async function publishDream() {
             anonymous: !!anonymous,
             coverImage: createPageState.coverBase64
         });
-        showNotification('发布成功', '你的梦想已经种下！', 'success');
-        dreamData.dreams = await api.getDreams();
-        navigateTo('home');
+        // 发布成功：扣减积分，进入待审核状态
+        showNotification('已提交审核', '消耗 20 积分，梦想待管理员审核后公开！', 'success');
+        // 更新本地能量显示
+        if (result.newEnergy !== undefined && dreamData.userProfile) {
+            dreamData.userProfile.energy = result.newEnergy;
+        }
+        navigateTo('profile');
+        // 跳转后显示我的梦想，用户可看到审核中的梦想
+        setTimeout(() => showMyDreams(), 300);
     } catch (e) { showNotification('发布失败', e.message, 'error'); }
 }
 

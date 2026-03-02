@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梦嘢 · 管理后台</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#c892d2",
+                        "primary-dark": "#a05ce0",
+                        "bg-dark": "#1c151d",
+                        "surface": "#261933",
+                        "surface-2": "#2d1b36",
+                        "glass": "rgba(255,255,255,0.06)",
+                        "glass-border": "rgba(255,255,255,0.1)"
+                    }
+                }
+            }
+        };
+    </script>
+
+    <link rel="stylesheet" href="styles/admin.css">
+</head>
+<body class="bg-[#1c151d] font-[Inter] text-slate-100 antialiased min-h-screen overflow-hidden">
+
+    <!-- Starfield Background -->
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#2e1a47_0%,#1a0f23_60%,#0d0612_100%)]"></div>
+        <div class="stars absolute inset-0"></div>
+        <div class="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px]"></div>
+        <div class="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-blue-600/5 rounded-full blur-[120px]"></div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="relative z-10 flex items-center justify-center min-h-screen p-6">
+        <div class="w-full max-w-sm">
+            <!-- Logo -->
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-purple-700 mb-4 shadow-[0_0_30px_rgba(200,146,210,0.4)]">
+                    <span class="material-symbols-outlined text-3xl text-white">cloud_queue</span>
+                </div>
+                <h1 class="text-2xl font-bold text-white">梦嘢管理后台</h1>
+                <p class="text-slate-400 text-sm mt-1">只有管理员可以访问</p>
+            </div>
+
+            <!-- Login Form -->
+            <div class="glass-panel rounded-2xl p-6">
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1.5 font-medium">用户名</label>
+                        <input id="login-name" type="text" placeholder="管理员用户名"
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1.5 font-medium">密码</label>
+                        <input id="login-password" type="password" placeholder="••••••••"
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all">
+                    </div>
+                    <div id="login-error" class="hidden text-xs text-red-400 text-center"></div>
+                    <button onclick="handleLogin()" id="login-btn"
+                        class="w-full py-3 bg-gradient-to-r from-primary to-purple-700 rounded-xl text-white font-semibold text-sm shadow-[0_0_20px_rgba(200,128,255,0.3)] hover:brightness-110 transition-all active:scale-95">
+                        登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="main-app" class="hidden relative z-10 flex h-screen overflow-hidden">
+
+        <!-- Sidebar -->
+        <aside class="w-60 shrink-0 flex flex-col glass-panel border-r border-white/10 overflow-y-auto">
+            <!-- Logo -->
+            <div class="p-5 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-purple-700 flex items-center justify-center shadow-[0_0_15px_rgba(200,128,255,0.3)]">
+                        <span class="material-symbols-outlined text-xl text-white">cloud_queue</span>
+                    </div>
+                    <div>
+                        <p class="font-bold text-white text-sm">梦嘢</p>
+                        <p class="text-[10px] text-slate-400">管理后台</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nav -->
+            <nav class="flex-1 p-3 flex flex-col gap-1">
+                <button onclick="showView('dashboard')" class="nav-btn" data-view="dashboard">
+                    <span class="material-symbols-outlined text-lg">dashboard</span>
+                    <span>概览</span>
+                </button>
+                <button onclick="showView('all-dreams')" class="nav-btn" data-view="all-dreams">
+                    <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                    <span>所有梦想</span>
+                </button>
+                <button onclick="showView('pending')" class="nav-btn" data-view="pending">
+                    <span class="material-symbols-outlined text-lg">pending</span>
+                    <span>待审核</span>
+                    <span id="pending-badge" class="ml-auto bg-primary/30 text-primary text-xs font-bold px-2 py-0.5 rounded-full hidden"></span>
+                </button>
+                <button onclick="showView('add-dream')" class="nav-btn" data-view="add-dream">
+                    <span class="material-symbols-outlined text-lg">add_circle</span>
+                    <span>录入梦想</span>
+                </button>
+            </nav>
+
+            <!-- Admin User -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-white" id="sidebar-avatar"></div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-white truncate" id="sidebar-name">管理员</p>
+                        <p class="text-[10px] text-slate-400">管理员</p>
+                    </div>
+                    <button onclick="handleLogout()" class="ml-auto text-slate-400 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-sm">logout</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-8" id="main-content">
+            <!-- Dynamic content loaded here -->
+        </main>
+    </div>
+
+    <!-- MODAL OVERLAY -->
+    <div id="modal-overlay" class="fixed inset-0 z-50 hidden items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+        <div id="modal-content" class="glass-panel rounded-2xl p-6 w-full max-w-md border border-white/10">
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

@@ -117,6 +117,41 @@ router.post('/daily-reward', async (req, res) => {
     }
 });
 
+// POST /api/profile/avatar - 更换头像
+router.post('/avatar', async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ error: '请先登录' });
+
+        const { avatar } = req.body;
+        if (!avatar) {
+            return res.status(400).json({ error: '请提供头像数据' });
+        }
+
+        // 验证是 base64 data URL 格式
+        if (!avatar.startsWith('data:image/')) {
+            return res.status(400).json({ error: '无效的图片格式' });
+        }
+
+        // 限制图片大小（压缩后的 base64 应在 200KB 以内）
+        if (avatar.length > 300 * 1024) {
+            return res.status(400).json({ error: '头像图片过大，请选择更小的图片' });
+        }
+
+        const { error } = await supabase
+            .from('users')
+            .update({ avatar })
+            .eq('id', userId);
+
+        if (error) throw error;
+
+        res.json({ success: true, avatar });
+    } catch (error) {
+        console.error('Error updating avatar:', error);
+        res.status(500).json({ error: '更换头像失败' });
+    }
+});
+
 // PUT /api/profile/bio - 修改个性签名
 router.put('/bio', async (req, res) => {
     try {

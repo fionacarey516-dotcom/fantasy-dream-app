@@ -237,6 +237,9 @@ async function renderDreamList(statusFilter) {
 
         const title = statusFilter === 'pending' ? '待审核梦想' : (statusFilter ? `${statusFilter} 梦想` : '所有梦想');
 
+        // 待审核页使用卡片布局，其他页使用表格布局
+        const isPendingView = statusFilter === 'pending';
+
         document.getElementById('main-content').innerHTML = `
         <div class="fade-in">
             <div class="flex items-center justify-between mb-6">
@@ -253,13 +256,15 @@ async function renderDreamList(statusFilter) {
                 </div>` : ''}
             </div>
 
-            <!-- Table -->
+            ${dreamsData.length === 0 ? `
+            <div class="glass-panel rounded-2xl flex flex-col items-center justify-center py-16">
+                <span class="material-symbols-outlined text-5xl text-slate-600 mb-3">inbox</span>
+                <p class="text-slate-400">暂无梦想</p>
+            </div>` : isPendingView ? `
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                ${dreamsData.map(d => renderPendingCard(d)).join('')}
+            </div>` : `
             <div class="glass-panel rounded-2xl overflow-hidden mb-4">
-                ${dreamsData.length === 0 ? `
-                <div class="flex flex-col items-center justify-center py-16">
-                    <span class="material-symbols-outlined text-5xl text-slate-600 mb-3">inbox</span>
-                    <p class="text-slate-400">暂无梦想</p>
-                </div>` : `
                 <table class="admin-table">
                     <thead>
                         <tr>
@@ -273,8 +278,8 @@ async function renderDreamList(statusFilter) {
                     <tbody>
                         ${dreamsData.map(d => renderDreamRow(d)).join('')}
                     </tbody>
-                </table>`}
-            </div>
+                </table>
+            </div>`}
 
             <!-- Pagination -->
             ${totalPages > 1 ? renderPagination() : ''}
@@ -282,6 +287,53 @@ async function renderDreamList(statusFilter) {
     } catch (e) {
         showError('加载梦想列表失败：' + e.message);
     }
+}
+
+function renderPendingCard(d) {
+    return `
+    <div class="glass-panel rounded-2xl overflow-hidden border border-white/10 flex flex-col" style="border-color: rgba(200,146,210,0.2);">
+        <!-- Cover Image -->
+        <div class="relative h-52 w-full bg-gradient-to-br from-purple-900/60 to-indigo-900/60 flex items-center justify-center shrink-0 overflow-hidden">
+            ${d.coverImage
+            ? `<img src="${d.coverImage}" class="absolute inset-0 w-full h-full object-cover" alt="封面">`
+            : `<div class="text-6xl select-none">${d.emoji || '✨'}</div>`
+        }
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/90 text-white backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-[13px]">schedule</span>待审核
+                </span>
+            </div>
+            <div class="absolute bottom-3 left-3 right-3">
+                <p class="text-white font-bold text-lg leading-tight drop-shadow-lg line-clamp-2">${escHtml(d.title)}</p>
+            </div>
+        </div>
+        <!-- Content -->
+        <div class="p-4 flex flex-col gap-3 flex-1">
+            <!-- Author -->
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    ${(d.author?.name || '?').charAt(0).toUpperCase()}
+                </div>
+                <span class="text-sm text-slate-300 font-medium">${escHtml(d.author?.name || '匿名')}</span>
+                <span class="ml-auto text-xs text-slate-500 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px] text-pink-400">favorite</span>${d.likes || 0}
+                    <span class="material-symbols-outlined text-[13px] text-cyan-400 ml-1">bolt</span>${d.supporters || 0}
+                </span>
+            </div>
+            <!-- Description -->
+            <p class="text-sm text-slate-300 leading-relaxed line-clamp-3 flex-1">${escHtml(d.description || '暂无描述')}</p>
+            <!-- Actions -->
+            <div class="flex gap-2 pt-2 border-t border-white/10 mt-auto">
+                <button onclick="approveDream(${d.id})" class="btn-success flex-1 justify-center py-2.5">
+                    <span class="material-symbols-outlined text-sm">check</span>审核通过
+                </button>
+                <button onclick="openRejectModal(${d.id}, '${escHtml(d.title)}')" class="btn-danger flex-1 justify-center py-2.5">
+                    <span class="material-symbols-outlined text-sm">close</span>拒绝
+                </button>
+            </div>
+        </div>
+    </div>`;
 }
 
 function filterDreams(status) {

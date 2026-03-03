@@ -45,6 +45,10 @@ async function handleLogin() {
         await loadAllData();
         navigateTo('home');
         showNotification('登录成功', `欢迎回来，${result.user.name}！`, 'success');
+        if (result.dailyReward) {
+            setTimeout(() => showNotification('🎁 每日签到', '今日登录奖励 +50 积分已到账！', 'success'), 800);
+        }
+        updateNavProfileAvatar();
     } catch (error) { showNotification('登录失败', error.message, 'error'); }
 }
 
@@ -61,6 +65,7 @@ async function handleRegister() {
         await loadAllData();
         navigateTo('home');
         showNotification('注册成功', `欢迎，${result.user.name}！赠送100能量`, 'success');
+        updateNavProfileAvatar();
     } catch (error) { showNotification('注册失败', error.message, 'error'); }
 }
 
@@ -69,10 +74,31 @@ function handleLogout() {
     localStorage.removeItem('current_user');
     navigateTo('home');
     showNotification('已退出', '期待你的再次归来', 'info');
+    updateNavProfileAvatar();
 }
 
 function getCurrentUser() {
     try { return JSON.parse(localStorage.getItem('current_user')); } catch { return null; }
+}
+
+// ========== NAV PROFILE AVATAR ==========
+function updateNavProfileAvatar() {
+    const container = document.getElementById('nav-profile-avatar');
+    if (!container) return;
+    const user = getCurrentUser();
+    if (user && user.avatar) {
+        // Show real avatar
+        container.innerHTML = `<img src="${user.avatar}" class="w-full h-full object-cover" alt="me">`;
+        container.classList.remove('bg-gradient-to-tr', 'from-primary', 'to-purple-600');
+    } else if (user && user.name) {
+        // Show gradient initial
+        container.innerHTML = `<span class="text-xs font-bold text-white">${user.name.charAt(0).toUpperCase()}</span>`;
+        container.classList.add('bg-gradient-to-tr', 'from-primary', 'to-purple-600');
+    } else {
+        // Not logged in — show person icon
+        container.innerHTML = `<span class="material-symbols-outlined text-xl text-slate-400">person</span>`;
+        container.classList.remove('bg-gradient-to-tr', 'from-primary', 'to-purple-600');
+    }
 }
 
 // ========== LOGIN PROMPT MODAL ==========
@@ -370,6 +396,7 @@ async function showProfilePage() {
             const merged = { ...storedUser, ...profile };
             localStorage.setItem('current_user', JSON.stringify(merged));
         }
+        updateNavProfileAvatar(); // Refresh nav with latest avatar from API
         content.innerHTML = `<div class="fade-in">${renderProfileHTML(profile)}</div>`;
     } catch (e) {
         content.innerHTML = `<div class="text-center py-24 text-slate-400"><div class="text-4xl mb-3">😞</div><p>无法加载个人信息</p><p class="text-sm mt-2">${e.message}</p><button onclick="navigateTo('login')" class="mt-4 px-6 py-2 bg-primary text-white rounded-full text-sm">重新登录</button></div>`;
@@ -386,10 +413,11 @@ function renderProfileHTML(profile) {
         <div class="relative w-full">
             <div class="h-48 w-full bg-gradient-to-b from-[#4a2b6b] to-background-dark relative overflow-hidden"><div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div></div>
             <div class="px-6 -mt-12 flex flex-col items-center relative z-10">
-                <div class="relative group">
+                <div class="relative group cursor-pointer" onclick="showChangeAvatarModal()" title="更换头像">
                     <div class="absolute -inset-1 bg-gradient-to-r from-primary to-purple-600 rounded-full blur opacity-75"></div>
                     <div class="relative w-24 h-24 rounded-full p-1 bg-background-dark">
                         ${profile.avatar ? `<img alt="Profile" class="w-full h-full object-cover rounded-full border-2 border-background-dark avatar-glow" src="${profile.avatar}">` : `<div class="w-full h-full rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-3xl font-bold text-white border-2 border-background-dark">${(profile.name || 'U').charAt(0)}</div>`}
+                        <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-white text-2xl">add_a_photo</span></div>
                     </div>
                 </div>
                 <div class="mt-3 text-center">
@@ -406,7 +434,9 @@ function renderProfileHTML(profile) {
                         <div class="w-10 h-10 rounded-lg bg-primary/30 flex items-center justify-center"><span class="material-symbols-outlined text-xl text-primary">bolt</span></div>
                         <div><p class="text-[10px] text-slate-400 mb-0.5">我的能量</p><p class="text-xl font-bold text-white">${(profile.energy || 0).toLocaleString()}</p></div>
                     </div>
-                    <button class="px-4 py-2 rounded-lg ${profile.todayClaimed ? 'bg-white/5 text-slate-500' : 'bg-white/10 text-white'} text-xs font-medium hover:bg-white/20 transition-colors" onclick="claimDailyReward()">${profile.todayClaimed ? '已领取' : '每日+50'}</button>
+                    <div class="px-3 py-1.5 rounded-lg ${profile.todayClaimed ? 'bg-green-500/15 border border-green-500/30' : 'bg-white/5 border border-white/10'} text-xs font-medium ${profile.todayClaimed ? 'text-green-400' : 'text-slate-400'} flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px]">${profile.todayClaimed ? 'check_circle' : 'schedule'}</span>${profile.todayClaimed ? '今日已签到 +50' : '登录自动签到'}
+                    </div>
                 </div>
             </div>
         </div>
@@ -511,7 +541,11 @@ function showAccountSettings() {
     content.innerHTML = `<div class="fade-in">
         <div class="flex items-center gap-3 mb-6"><button onclick="navigateTo('profile')" class="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white hover:bg-white/10 transition-colors"><span class="material-symbols-outlined">arrow_back</span></button><h2 class="text-xl font-bold text-white">账号设置</h2></div>
         <div class="space-y-3">
-            <button onclick="showChangeBioModal('${currentBio.replace(/'/g, "\\'")}')" class="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+            <button onclick="showChangeAvatarModal()" class="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">add_a_photo</span><span class="text-white font-medium text-sm">更换头像</span></div>
+                <span class="material-symbols-outlined text-slate-500 text-lg">chevron_right</span>
+            </button>
+            <button onclick="showChangeBioModal('${currentBio.replace(/'/g, "\\'")}')"\ class="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                 <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">edit_note</span><span class="text-white font-medium text-sm">修改签名</span></div>
                 <span class="material-symbols-outlined text-slate-500 text-lg">chevron_right</span>
             </button>
@@ -525,6 +559,120 @@ function showAccountSettings() {
             </button>
         </div>
     </div>`;
+}
+
+// ========== CHANGE AVATAR MODAL ==========
+function showChangeAvatarModal() {
+    const existing = document.getElementById('change-avatar-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'change-avatar-modal';
+    modal.className = 'fixed inset-0 z-[200] flex items-center justify-center';
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="this.parentElement.remove()"></div>
+        <div class="relative z-10 w-full max-w-sm mx-4 animate-fade-in">
+            <div class="bg-[#2d1b36] border border-white/10 rounded-3xl p-8 shadow-2xl relative">
+                <button onclick="this.closest('#change-avatar-modal').remove()" class="absolute top-4 right-4 text-white/50 hover:text-white transition-colors w-8 h-8 flex items-center justify-center bg-white/5 rounded-full"><span class="material-symbols-outlined text-sm">close</span></button>
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20"><span class="material-symbols-outlined text-3xl text-primary">add_a_photo</span></div>
+                    <h3 class="text-xl font-bold text-white mb-1">更换头像</h3>
+                    <p class="text-slate-400 text-sm">选择本地图片作为头像（最大5MB）</p>
+                </div>
+                <input type="file" id="avatar-file-input" accept="image/*" class="hidden" onchange="handleAvatarUpload(event)">
+                <div id="avatar-preview-area" class="mb-5 flex flex-col items-center gap-3 hidden">
+                    <img id="avatar-preview-img" class="w-24 h-24 rounded-full object-cover border-2 border-primary/50" alt="预览">
+                    <p class="text-xs text-slate-400">预览效果</p>
+                </div>
+                <div class="space-y-3">
+                    <button onclick="document.getElementById('avatar-file-input').click()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-lg">upload</span>选择图片
+                    </button>
+                    <button id="avatar-save-btn" onclick="saveAvatar()" class="w-full py-3 bg-gradient-to-r from-primary to-purple-500 rounded-xl text-white font-bold text-sm shadow-[0_0_20px_rgba(200,128,255,0.3)] hover:shadow-[0_0_30px_rgba(200,128,255,0.5)] transition-all hidden flex justify-center items-center h-[46px]">
+                        <span id="avatar-save-btn-text">保存头像</span>
+                        <div id="avatar-save-spinner" class="hidden w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+let _pendingAvatarBase64 = null;
+
+function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('文件过大', '头像图片不能超过10MB', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        // Use Canvas to resize + compress to a small JPEG thumbnail (max 200x200)
+        const img = new Image();
+        img.onload = function () {
+            const SIZE = 200;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+            // Center-crop: draw the largest square from center, then scale to SIZE
+            const minSide = Math.min(img.width, img.height);
+            const sx = (img.width - minSide) / 2;
+            const sy = (img.height - minSide) / 2;
+            ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, SIZE, SIZE);
+            // Export as JPEG at 80% quality (~15-30KB typically)
+            _pendingAvatarBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            const previewArea = document.getElementById('avatar-preview-area');
+            const previewImg = document.getElementById('avatar-preview-img');
+            const saveBtn = document.getElementById('avatar-save-btn');
+            if (previewArea && previewImg) {
+                previewImg.src = _pendingAvatarBase64;
+                previewArea.classList.remove('hidden');
+            }
+            if (saveBtn) saveBtn.classList.remove('hidden');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function saveAvatar() {
+    if (!_pendingAvatarBase64) return;
+    const btnText = document.getElementById('avatar-save-btn-text');
+    const spinner = document.getElementById('avatar-save-spinner');
+    if (btnText) btnText.classList.add('hidden');
+    if (spinner) spinner.classList.remove('hidden');
+    try {
+        const response = await api.updateAvatar(_pendingAvatarBase64);
+        if (response && response.success) {
+            // Update local user cache
+            const storedUser = getCurrentUser();
+            if (storedUser) {
+                storedUser.avatar = _pendingAvatarBase64;
+                localStorage.setItem('current_user', JSON.stringify(storedUser));
+            }
+            if (Array.isArray(window.currentUser)) {
+                window.currentUser[0].avatar = _pendingAvatarBase64;
+            } else if (window.currentUser) {
+                window.currentUser.avatar = _pendingAvatarBase64;
+            }
+            _pendingAvatarBase64 = null;
+            updateNavProfileAvatar(); // Update bottom nav immediately
+            showNotification('更换成功', '头像已更新', 'success');
+            const modal = document.getElementById('change-avatar-modal');
+            if (modal) modal.remove();
+            // Refresh profile page to show new avatar
+            navigateTo('profile');
+        }
+    } catch (error) {
+        if (btnText) btnText.classList.remove('hidden');
+        if (spinner) spinner.classList.add('hidden');
+        showNotification('更换失败', error.message || '网络错误', 'error');
+    }
 }
 
 function showChangeBioModal(currentBio) {
@@ -783,7 +931,7 @@ function renderDetailPage(dreamId) {
         <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a0f23] via-[#1a0f23]/95 to-transparent pt-4 pb-8 px-5 z-40 max-w-md mx-auto">
             <div class="flex gap-3">
                 <button onclick="likeDream(${dream.id})" class="flex items-center justify-center w-10 h-10 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 hover:bg-pink-500/20 transition-colors shrink-0" title="点赞"><span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">favorite</span></button>
-                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-primary flex items-center justify-center text-xs font-bold text-white shrink-0">${(getCurrentUser()?.name || 'U').charAt(0)}</div>
+                ${(() => { const u = getCurrentUser(); return u?.avatar ? `<img src="${u.avatar}" class="w-10 h-10 rounded-full object-cover border border-white/20 shrink-0" alt="me">` : `<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-primary flex items-center justify-center text-xs font-bold text-white shrink-0">${(u?.name || 'U').charAt(0)}</div>`; })()}
                 <div class="flex-1"><input id="comment-input" type="text" placeholder="写下你的评论..." class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all"></div>
                 <button onclick="submitComment(${dream.id})" class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors shrink-0"><span class="material-symbols-outlined text-lg">send</span></button>
             </div>
@@ -972,14 +1120,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         // 'network_error' or 'success' — keep the session alive
     }
 
-    initializeRouter();
+    // Update nav profile avatar from cached user (works without extra API call)
+    updateNavProfileAvatar();
 
-    // Daily reward for logged-in users
-    if (isLoggedIn()) {
-        const today = new Date().toISOString().split('T')[0];
-        const lastClaimDate = localStorage.getItem('lastClaimDate');
-        if (lastClaimDate !== today && !dreamData.userProfile.todayClaimed) {
-            claimDailyReward();
-        }
-    }
+    initializeRouter();
 });

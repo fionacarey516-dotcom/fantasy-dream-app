@@ -172,6 +172,14 @@ const api = {
         });
     },
 
+    // 更换头像
+    async updateAvatar(avatar) {
+        return this.request('/api/profile/avatar', {
+            method: 'POST',
+            body: JSON.stringify({ avatar })
+        });
+    },
+
     // 获取用户发布的梦想
     async getMyDreams() {
         return this.request('/api/profile/my-dreams');

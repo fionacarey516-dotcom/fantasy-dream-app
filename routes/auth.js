@@ -81,10 +81,10 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: '用户名和密码不能为空' });
         }
 
-        // 查找用户
+        // 查找用户 (不查 avatar 字段，避免超大头像导致查询失败)
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, name, avatar, verified, password_hash, role')
+            .select('id, name, verified, password_hash, role')
             .eq('name', name)
             .single();
 
@@ -98,15 +98,41 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: '用户名或密码错误' });
         }
 
+        // 自动每日签到：若今天未领取，自动发放50积分
+        let dailyReward = false;
+        try {
+            const { data: userEnergy } = await supabase
+                .from('users')
+                .select('energy, today_claimed, last_login_date')
+                .eq('id', user.id)
+                .single();
+
+            const today = new Date().toISOString().split('T')[0];
+            if (userEnergy && !(userEnergy.last_login_date === today && userEnergy.today_claimed)) {
+                await supabase
+                    .from('users')
+                    .update({
+                        energy: (userEnergy.energy || 0) + 50,
+                        today_claimed: true,
+                        last_login_date: today
+                    })
+                    .eq('id', user.id);
+                dailyReward = true;
+            }
+        } catch (rewardErr) {
+            // 签到失败不影响登录，静默处理
+            console.error('Daily reward error:', rewardErr);
+        }
+
         // 生成 JWT
         const token = jwt.sign({ userId: user.id, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
 
         res.json({
             token,
+            dailyReward,
             user: {
                 id: user.id,
                 name: user.name,
-                avatar: user.avatar,
                 verified: user.verified,
                 role: user.role
             }

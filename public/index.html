@@ -90,7 +90,9 @@
                     <span class="text-[10px] font-medium text-slate-400">通知</span>
                 </button>
                 <button onclick="navigateTo('profile')" class="nav-item flex flex-1 flex-col items-center justify-end gap-1 group" data-page="profile">
-                    <span class="material-symbols-outlined text-2xl text-slate-400 group-hover:text-white transition-colors">person</span>
+                    <div id="nav-profile-avatar" class="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-xs font-bold text-white border-2 border-transparent transition-all group-hover:border-white/30">
+                        <span class="material-symbols-outlined text-xl text-slate-400 nav-profile-icon">person</span>
+                    </div>
                     <span class="text-[10px] font-medium text-slate-400">我的</span>
                 </button>
             </div>
